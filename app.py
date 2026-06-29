@@ -117,7 +117,7 @@ else:
                 </div>
                 """
                 st.markdown(html_content, unsafe_allow_html=True)
-  # --- タブ1: 音声から文字起こし ---
+# --- タブ1: 音声から文字起こし ---
 with tab1:
     uploaded_file = st.file_uploader("ボタイムなどの音声ファイルをアップロード (mp3, wav, m4aなど) ", type=["mp3", "wav", "m4a", "mp4"])
     if uploaded_file is not None:
@@ -155,18 +155,17 @@ with tab1:
                 except Exception as e:
                     st.error(f"文字起こしエラー: {e}")
 
-           # 文字起こし結果の編集エリア
-        if 'transcript_text' in st.session_state:
-            edited_text = st.text_area(
-                "文字起こしされたテキスト (改行ごとに1発言として分析されます) ", 
-                value=st.session_state['transcript_text'], 
-                key="edited_transcript_text", # ←これでボタンを押してもデータが消えなくなります
-                height=300
-            )
-            if st.button("② このテキストを分析する"):
-                    res = analyze_text(edited_text)
-                    display_results(res)
-
+    # 文字起こし結果の編集エリアと分析ボタン（with tab1 の中に入れます）
+    if 'transcript_text' in st.session_state:
+        edited_text = st.text_area(
+            "文字起こしされたテキスト (改行ごとに1発言として分析されます) ",
+            value=st.session_state['transcript_text'],
+            key="edited_transcript_text",
+            height=300
+        )
+        if st.button("② このテキストを分析する"):
+            res = analyze_text(edited_text)
+            display_results(res)
    # --- タブ2: テキストから直接分析 ---
 with tab2:
     user_input = st.text_area("すでに文字起こしされたテキストをここに貼り付けてください（1行1発言）", height=300)
