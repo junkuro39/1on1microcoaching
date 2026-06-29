@@ -156,16 +156,16 @@ with tab1:
                     st.error(f"文字起こしエラー: {e}")
 
            # 文字起こし結果の編集エリア
-if 'transcript_text' in st.session_state:
-    edited_text = st.text_area(
-        "文字起こしされたテキスト (改行ごとに1発言として分析されます) ", 
-        value=st.session_state['transcript_text'], 
-        key="edited_transcript_text", # ←これでボタンを押してもデータが消えなくなります
-        height=300
-    )
-    if st.button("② このテキストを分析する"):
-        res = analyze_text(edited_text)
-        display_results(res)
+        if 'transcript_text' in st.session_state:
+            edited_text = st.text_area(
+                "文字起こしされたテキスト (改行ごとに1発言として分析されます) ", 
+                value=st.session_state['transcript_text'], 
+                key="edited_transcript_text", # ←これでボタンを押してもデータが消えなくなります
+                height=300
+            )
+            if st.button("② このテキストを分析する"):
+                    res = analyze_text(edited_text)
+                    display_results(res)
 
    # --- タブ2: テキストから直接分析 ---
 with tab2:
