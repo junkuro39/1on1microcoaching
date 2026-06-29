@@ -130,6 +130,6 @@ with tab2:
         else:
             st.warning("テキストを入力してください。")
 
-# --- 分析画面の表示処理（一番左の壁にくっつけます） ---
+# --- 分析画面の表示処理 ---
 if "current_raw_results" in st.session_state:
     display_results(st.session_state['current_raw_results'])
