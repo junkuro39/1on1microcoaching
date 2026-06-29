@@ -117,23 +117,41 @@ else:
                 </div>
                 """
                 st.markdown(html_content, unsafe_allow_html=True)
-    # --- タブ1: 音声から文字起こし ---
+  # --- タブ1: 音声から文字起こし ---
 with tab1:
     uploaded_file = st.file_uploader("ボタイムなどの音声ファイルをアップロード (mp3, wav, m4aなど) ", type=["mp3", "wav", "m4a", "mp4"])
     if uploaded_file is not None:
         if st.button("① 音声を文字起こしする"):
-            with st.spinner("AIが音声をテキストに変換しています..."):
+            with st.spinner("AIが音声からテキストに変換しています..."):
                 try:
-                    # 音声のデータを安全に読み込みます
                     audio_bytes = uploaded_file.read()
                     
-                    # OpenAI Whisper APIで文字起こし（※.nameの後に半角カンマを入れました）
+                    # 1. 音声から生のテキストを抽出
                     transcript = client.audio.transcriptions.create(
                         model="whisper-1",
                         file=(uploaded_file.name, audio_bytes)
                     )
-                    st.session_state['transcript_text'] = transcript.text
-                    st.success("文字起こしが完了しました！下のテキストを確認・編集してください。")
+                    raw_text = transcript.text
+
+                    # 2. GPTを使って、コーチとプレイヤーの発話を文脈から見極めて改行・整形
+                    separation_prompt = """
+                    与えられた文章は、コーチとプレイヤーの1対1の会話を文字起こししたものです。
+                    文脈から「コーチの発言」と「プレイヤーの発言」を見極め、話者が変わるごとに必ず改行（1行1発言の形式）にしてください。
+                    余計な解説や「コーチ：」「プレイヤー：」などのラベルは一切付けず、純粋な発言内容だけのテキストにして出力してください。
+                    """
+                    
+                    separation_response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[
+                            {"role": "system", "content": separation_prompt},
+                            {"role": "user", "content": raw_text}
+                        ],
+                        temperature=0.2
+                    )
+                    
+                    # 整形された改行済みのテキストを保存
+                    st.session_state['transcript_text'] = separation_response.choices[0].message.content
+                    st.success("話者ごとに自動改行して文字起こしが完了しました！")
                 except Exception as e:
                     st.error(f"文字起こしエラー: {e}")
 
