@@ -80,7 +80,7 @@ with tab1:
                     sep_response = client.chat.completions.create(
                         model="gpt-4o-mini",
                         messages=[
-                            {"role": "system", "prompt": sep_prompt},
+                            {"role": "system", "content": sep_prompt},
                             {"role": "user", "content": transcript.text}
                         ],
                         temperature=0.2
