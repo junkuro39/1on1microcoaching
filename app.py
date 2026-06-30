@@ -6,15 +6,16 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 SYSTEM_PROMPT = """
 You are an expert coaching mentor.
-Classify the given coaching transcript line by line into one of these 5 categories based on the context.
-CRITICAL: Do NOT skip or omit any lines. Keep all lines from both the coach and the player.
+Classify the given coaching transcript line by line into one of these 6 categories based on the context.
+CRITICAL: Do NOT skip, omit, or merge any lines. Keep all lines from both the coach and the player.
 
 Categories:
 1. 指示: Coach giving orders, teaching what to do, or specifying concrete actions.
 2. 提案: Coach presenting own opinions but leaving choices to the coachee.
 3. 質問: Coach asking questions to the coachee.
 4. 委譲: Coach encouraging the coachee to think, or waiting for their voluntary speech.
-5. その他: Acknowledgment, mirroring, empathy, or ANY statements spoken by the player (coachee).
+5. その他: ONLY coach's own statements that don't fit above (e.g., coach's acknowledgment "Yes", mirroring, empathy, or small talk).
+6. プレーヤー: ANY and ALL statements spoken by the player (coachee / subordinate). Never classify player's speech as coach's categories or "その他".
 
 Output MUST be a pure JSON array of objects, with NO markdown code blocks, NO extra text.
 Format:
@@ -23,7 +24,8 @@ Format:
   {"text": "statement2", "label": "提案"},
   {"text": "statement3", "label": "質問"},
   {"text": "statement4", "label": "委譲"},
-  {"text": "statement5", "label": "その他"}
+  {"text": "statement5", "label": "その他"},
+  {"text": "statement6", "label": "プレーヤー"}
 ]
 """
 
@@ -50,7 +52,8 @@ COLOR_MAP = {
     "提案": {"bg": "#fff2e6", "text": "#cc6600"},
     "質問": {"bg": "#e6f2ff", "text": "#0066cc"},
     "委譲": {"bg": "#e6ffe6", "text": "#008000"},
-    "その他": {"bg": "#f2f2f2", "text": "#333333"}
+    "その他": {"bg": "#f9f9f9", "text": "#666666"},
+    "プレーヤー": {"bg": "#e1e1e1", "text": "#111111"}
 }
 
 st.title("🎙️ コーチング逐語分析アプリ")
@@ -77,7 +80,7 @@ with tab1:
                     sep_response = client.chat.completions.create(
                         model="gpt-4o-mini",
                         messages=[
-                            {"role": "system", "content": sep_prompt},
+                            {"role": "system", "prompt": sep_prompt},
                             {"role": "user", "content": transcript.text}
                         ],
                         temperature=0.2
@@ -116,7 +119,8 @@ if st.session_state['analysis_results'] is not None:
         <span style="background-color: #fff2e6; color: #cc6600; padding: 2px 6px; border-radius: 3px; margin-right: 10px;">■ 提案</span>
         <span style="background-color: #e6f2ff; color: #0066cc; padding: 2px 6px; border-radius: 3px; margin-right: 10px;">■ 質問</span>
         <span style="background-color: #e6ffe6; color: #008000; padding: 2px 6px; border-radius: 3px; margin-right: 10px;">■ 委譲</span>
-        <span style="background-color: #f2f2f2; color: #333333; padding: 2px 6px; border-radius: 3px;">■ その他（プレイヤー発言含む）</span>
+        <span style="background-color: #f9f9f9; color: #666666; padding: 2px 6px; border-radius: 3px; margin-right: 10px;">■ その他（コーチの相槌等）</span>
+        <span style="background-color: #e1e1e1; color: #111111; padding: 2px 6px; border-radius: 3px;">■ プレーヤー発言</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -137,7 +141,7 @@ if st.session_state['analysis_results'] is not None:
             st.markdown(html, unsafe_allow_html=True)
             
         with col2:
-            options = ["指示", "提案", "質問", "委譲", "その他"]
+            options = ["指示", "提案", "質問", "委譲", "その他", "プレーヤー"]
             try:
                 default_idx = options.index(current_label)
             except ValueError:
