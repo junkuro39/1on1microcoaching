@@ -7,13 +7,14 @@ client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 SYSTEM_PROMPT = """
 You are an expert coaching mentor.
 Classify the given coaching transcript line by line into one of these 5 categories based on the context.
+CRITICAL: Do NOT skip or omit any lines. Keep all lines from both the coach and the player.
 
 Categories:
-1. 指示: Giving orders, teaching what to do, or specifying concrete actions.
-2. 提案: Presenting own opinions but leaving choices to the coachee (e.g., "How about...?").
-3. 質問: Asking questions to the coachee.
-4. 委譲: Encouraging the coachee to think, or waiting for their voluntary speech.
-5. その他: Acknowledgment ("Yes", "I see"), mirroring, empathy, or any statements by the player.
+1. 指示: Coach giving orders, teaching what to do, or specifying concrete actions.
+2. 提案: Coach presenting own opinions but leaving choices to the coachee.
+3. 質問: Coach asking questions to the coachee.
+4. 委譲: Coach encouraging the coachee to think, or waiting for their voluntary speech.
+5. その他: Acknowledgment, mirroring, empathy, or ANY statements spoken by the player (coachee).
 
 Output MUST be a pure JSON array of objects, with NO markdown code blocks, NO extra text.
 Format:
@@ -102,6 +103,8 @@ with tab2:
                 res = analyze_text(user_input)
                 if res:
                     st.session_state['analysis_results'] = res
+        else:
+            st.warning("テキストを入力してください。")
 
 if st.session_state['analysis_results'] is not None:
     st.markdown("---")
@@ -113,7 +116,7 @@ if st.session_state['analysis_results'] is not None:
         <span style="background-color: #fff2e6; color: #cc6600; padding: 2px 6px; border-radius: 3px; margin-right: 10px;">■ 提案</span>
         <span style="background-color: #e6f2ff; color: #0066cc; padding: 2px 6px; border-radius: 3px; margin-right: 10px;">■ 質問</span>
         <span style="background-color: #e6ffe6; color: #008000; padding: 2px 6px; border-radius: 3px; margin-right: 10px;">■ 委譲</span>
-        <span style="background-color: #f2f2f2; color: #333333; padding: 2px 6px; border-radius: 3px;">■ その他</span>
+        <span style="background-color: #f2f2f2; color: #333333; padding: 2px 6px; border-radius: 3px;">■ その他（プレイヤー発言含む）</span>
     </div>
     """, unsafe_allow_html=True)
 
