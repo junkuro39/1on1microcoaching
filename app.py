@@ -1,6 +1,7 @@
 import streamlit as st
 from openai import OpenAI
 import json
+import plotly.express as px
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
@@ -48,12 +49,12 @@ def analyze_text(text):
         return None
 
 COLOR_MAP = {
-    "指示": {"bg": "#ffe6e6", "text": "#b30000"},
-    "提案": {"bg": "#fff2e6", "text": "#cc6600"},
-    "質問": {"bg": "#e6f2ff", "text": "#0066cc"},
-    "委譲": {"bg": "#e6ffe6", "text": "#008000"},
-    "その他": {"bg": "#f9f9f9", "text": "#666666"},
-    "プレーヤー": {"bg": "#e1e1e1", "text": "#111111"}
+    "指示": {"bg": "#ffe6e6", "text": "#b30000", "hex": "#ffe6e6"},
+    "提案": {"bg": "#fff2e6", "text": "#cc6600", "hex": "#fff2e6"},
+    "質問": {"bg": "#e6f2ff", "text": "#0066cc", "hex": "#e6f2ff"},
+    "委譲": {"bg": "#e6ffe6", "text": "#008000", "hex": "#e6ffe6"},
+    "その他": {"bg": "#f9f9f9", "text": "#666666", "hex": "#f9f9f9"},
+    "プレーヤー": {"bg": "#e1e1e1", "text": "#111111", "hex": "#e1e1e1"}
 }
 
 st.title("🎙️ コーチング逐語分析アプリ")
@@ -110,6 +111,48 @@ with tab2:
             st.warning("テキストを入力してください。")
 
 if st.session_state['analysis_results'] is not None:
+    st.markdown("---")
+    
+    # --- 📊 割合の円グラフセクション ---
+    st.markdown("### 📈 アプローチの割合（4つの分類）")
+    
+    # 4つのアプローチの件数を集計（その他・プレーヤーは除外）
+    target_labels = ["指示", "提案", "質問", "委譲"]
+    counts = {label: 0 for label in target_labels}
+    for item in st.session_state['analysis_results']:
+        if item['label'] in counts:
+            counts[item['label']] += 1
+            
+    total_coaching_actions = sum(counts.values())
+    
+    if total_coaching_actions > 0:
+        # グラフ用のデータ整理
+        chart_data = [{"ラベル": k, "回数": v} for k, v in counts.items() if v > 0]
+        
+        # 色の対応付け
+        color_discrete_map = {
+            "指示": COLOR_MAP["指示"]["hex"],
+            "提案": COLOR_MAP["提案"]["hex"],
+            "質問": COLOR_MAP["質問"]["hex"],
+            "委譲": COLOR_MAP["委譲"]["hex"]
+        }
+        
+        # Plotlyで円グラフを作成
+        fig = px.pie(
+            chart_data, 
+            values="回数", 
+            names="ラベル", 
+            color="ラベル",
+            color_discrete_map=color_discrete_map,
+            hole=0.3 # ドーナツ型にして見やすく
+        )
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), height=350)
+        
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("コーチの4つのアプローチ（指示・提案・質問・委譲）がまだ検出されていないため、グラフを表示できません。")
+
     st.markdown("---")
     st.markdown("### 📊 分析結果と修正")
     
