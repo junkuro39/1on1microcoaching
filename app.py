@@ -5,16 +5,19 @@ import plotly.express as px
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
+# --- 内部の判定ロジック（意思決定の割合）を強化したSYSTEM_PROMPT ---
 SYSTEM_PROMPT = """
 You are an expert coaching mentor.
-Classify the given coaching transcript line by line into one of these 6 categories based on the context.
+Classify the given coaching transcript line by line into one of the categories based on the context.
 CRITICAL: Do NOT skip, omit, or merge any lines. Keep all lines from both the coach and the player.
 
-Categories:
-1. 指示: Coach giving orders, teaching what to do, or specifying concrete actions.
-2. 提案: Coach presenting own opinions but leaving choices to the coachee.
-3. 質問: Coach asking questions to the coachee.
-4. 委譲: Coach encouraging the coachee to think, or waiting for their voluntary speech.
+When classifying coach's statements into the 4 approaches (指示, 提案, 質問, 委譲), evaluate based on "Who holds the initiative for decision-making":
+
+1. 指示: Coach holds 100% of decision-making. Giving orders, teaching, or specifying concrete actions.
+   - CRITICAL: Rhetorical questions, scolding, or leading questions (e.g., "Why didn't you pass?", "You should have shot, right?") MUST be classified as "指示", NOT "質問", because the coach leaves no room for the player's own decision/thought.
+2. 提案: Coach holds ~70% of decision-making. Presenting own opinions/options, but leaving the final choice to the coachee.
+3. 質問: Player holds ~70% of decision-making. Asking open questions to elicit the coachee's internal thinking and decision-making.
+4. 委譲: Player holds 100% of decision-making. Encouraging the coachee to take full initiative, or entrusting execution/decisions entirely to them.
 5. その他: ONLY coach's own statements that don't fit above (e.g., coach's acknowledgment "Yes", mirroring, empathy, or small talk).
 6. プレーヤー: ANY and ALL statements spoken by the player (coachee / subordinate). Never classify player's speech as coach's categories or "その他".
 
@@ -38,7 +41,7 @@ def analyze_text(text):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": text}
             ],
-            temperature=0.3
+            temperature=0.2 # 分類精度の安定化のために少し抑えめに設定
         )
         content = response.choices[0].message.content.strip()
         if content.startswith("```"):
@@ -120,7 +123,7 @@ if st.session_state['analysis_results'] is not None:
     target_labels = ["指示", "提案", "質問", "委譲"]
     counts = {label: 0 for label in target_labels}
     for item in st.session_state['analysis_results']:
-        if item['label'] in counts:
+        if item.get('label') in counts:
             counts[item['label']] += 1
             
     total_coaching_actions = sum(counts.values())
@@ -168,7 +171,7 @@ if st.session_state['analysis_results'] is not None:
     """, unsafe_allow_html=True)
 
     for idx, item in enumerate(st.session_state['analysis_results']):
-        current_label = item['label']
+        current_label = item.get('label', 'その他')
         if current_label not in COLOR_MAP:
             current_label = "その他"
             
