@@ -60,7 +60,7 @@ COLOR_MAP = {
     "プレーヤー": {"bg": "#e1e1e1", "text": "#111111", "hex": "#e1e1e1"}
 }
 
-st.title("🎙️ コーチング逐語分析アプリ")
+st.title("🎙️ 1対1マイクロコーチング分析アプリ")
 st.write("音声やテキストから発言の種類を分析し、後から手動で変更できます。")
 
 if 'analysis_results' not in st.session_state:
