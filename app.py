@@ -5,21 +5,27 @@ import plotly.express as px
 
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
-# --- 内部の判定ロジック（意思決定の割合）を強化したSYSTEM_PROMPT ---
+# --- 内部の判定ロジック（意思決定の割合・ Few-Shot例示）をさらに強化したSYSTEM_PROMPT ---
 SYSTEM_PROMPT = """
 You are an expert coaching mentor.
 Classify the given coaching transcript line by line into one of the categories based on the context.
 CRITICAL: Do NOT skip, omit, or merge any lines. Keep all lines from both the coach and the player.
 
-When classifying coach's statements into the 4 approaches (指示, 提案, 質問, 委譲), evaluate based on "Who holds the initiative for decision-making":
+When classifying coach's statements into the 4 approaches (指示, 提案, 質問, 委譲), evaluate strictly based on "Who holds the initiative and decision-making power":
 
 1. 指示: Coach holds 100% of decision-making. Giving orders, teaching, or specifying concrete actions.
    - CRITICAL: Rhetorical questions, scolding, or leading questions (e.g., "Why didn't you pass?", "You should have shot, right?") MUST be classified as "指示", NOT "質問", because the coach leaves no room for the player's own decision/thought.
 2. 提案: Coach holds ~70% of decision-making. Presenting own opinions/options, but leaving the final choice to the coachee.
 3. 質問: Player holds ~70% of decision-making. Asking open questions to elicit the coachee's internal thinking and decision-making.
 4. 委譲: Player holds 100% of decision-making. Encouraging the coachee to take full initiative, or entrusting execution/decisions entirely to them.
+   - CRITICAL (TRAP WARNING): Even if the statement ends with polite requests/instructions like "〜てください" or "〜てみて", if the core context is entrusting authority, choice, or execution to the player (e.g., "任せるのでやってみてください", "自分で考えてやってみて"), it MUST be classified as "委譲", NOT "指示".
 5. その他: ONLY coach's own statements that don't fit above (e.g., coach's acknowledgment "Yes", mirroring, empathy, or small talk).
 6. プレーヤー: ANY and ALL statements spoken by the player (coachee / subordinate). Never classify player's speech as coach's categories or "その他".
+
+【Examples for 委譲 (Delegation)】
+- "任せるのでやってみてください" -> 委譲 (Delegation)
+- "やり方は自由だから、まずは自分で考えてやってみてください" -> 委譲 (Delegation)
+- "ここは君に判断を委ねるね" -> 委譲 (Delegation)
 
 Output MUST be a pure JSON array of objects, with NO markdown code blocks, NO extra text.
 Format:
@@ -41,7 +47,7 @@ def analyze_text(text):
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": text}
             ],
-            temperature=0.2 # 分類精度の安定化のために少し抑えめに設定
+            temperature=0.1
         )
         content = response.choices[0].message.content.strip()
         if content.startswith("```"):
@@ -119,7 +125,6 @@ if st.session_state['analysis_results'] is not None:
     # --- 📊 割合の円グラフセクション ---
     st.markdown("### 📈 アプローチの割合（4つの分類）")
     
-    # 4つのアプローチの件数を集計（その他・プレーヤーは除外）
     target_labels = ["指示", "提案", "質問", "委譲"]
     counts = {label: 0 for label in target_labels}
     for item in st.session_state['analysis_results']:
@@ -129,10 +134,8 @@ if st.session_state['analysis_results'] is not None:
     total_coaching_actions = sum(counts.values())
     
     if total_coaching_actions > 0:
-        # グラフ用のデータ整理
         chart_data = [{"ラベル": k, "回数": v} for k, v in counts.items() if v > 0]
         
-        # 色の対応付け
         color_discrete_map = {
             "指示": COLOR_MAP["指示"]["hex"],
             "提案": COLOR_MAP["提案"]["hex"],
@@ -140,14 +143,13 @@ if st.session_state['analysis_results'] is not None:
             "委譲": COLOR_MAP["委譲"]["hex"]
         }
         
-        # Plotlyで円グラフを作成
         fig = px.pie(
             chart_data, 
             values="回数", 
             names="ラベル", 
             color="ラベル",
             color_discrete_map=color_discrete_map,
-            hole=0.3 # ドーナツ型にして見やすく
+            hole=0.3
         )
         fig.update_traces(textposition='inside', textinfo='percent+label')
         fig.update_layout(showlegend=True, margin=dict(t=10, b=10, l=10, r=10), height=350)
